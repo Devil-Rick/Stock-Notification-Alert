@@ -5,26 +5,42 @@ from datetime import date
 from datetime import timedelta
 from twilio.rest import Client
 
-STOCK_LIST = ["TSLA", "RKLB"]  # input all the req stock names
-COMPANY_LIST = ["Tesla", "Rocket Lab USA"]  # input all corresponding company names
+STOCK_LIST = ["TSLA", "INFY"]  # input all the req stock names
+COMPANY_LIST = ["Tesla", "Infosys Limited"]  # input all corresponding company names
 MSG_TEXT_LIST = []
 
-# ---------------------- Getting the date ------------------------#
+
+# ---------------------- Required Functions ------------------------ #
+def send_msg(msg: str):
+    # ---------------------- Sending the message ------------------------ #
+    msg_text = "\n".join(MSG_TEXT_LIST)
+    client = Client(config.TWILIO_ID, config.TWILIO_API)
+    message = client.messages.create(
+        body=f"{msg_text}{msg}",
+        from_='+13149123008',
+        to='+918016323773'
+    )
+    print(message.status)
+
+
+# ---------------------- Getting the date ------------------------ #
 today = date.today()
 yesterday = today - timedelta(days=1)
 day_before_yesterday = yesterday - timedelta(days=1)
 
-# ---------------------- Setting the Stock API ------------------------#
+# ---------------------- Setting the Stock API ------------------------ #
+# https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=ONGC&apikey=2EIMT3KDPHRHLY6L
 for i in range(len(STOCK_LIST)):
     STOCK = STOCK_LIST[i]
     COMPANY_NAME = COMPANY_LIST[i]
-
+    print(STOCK, len(STOCK_LIST))
     market_url = "https://www.alphavantage.co/query"
     market_params = {
         "function": "TIME_SERIES_DAILY",
         "symbol": STOCK,
         "apikey": config.STOCK_API
     }
+
     market_response = req.get(market_url, params=market_params)
     market_response.raise_for_status()
     market_response_data = market_response.json()
@@ -36,7 +52,7 @@ for i in range(len(STOCK_LIST)):
     elif percent_change < 0:
         MSG_TEXT_LIST.append(f"{STOCK} : 🔻 {percent_change}")
 
-    # ---------------------- Setting the News API ------------------------#
+    # ---------------------- Setting the News API ------------------------ #
     newsapi = NewsApiClient(api_key=config.NEWS_API)
     all_articles = newsapi.get_everything(q=COMPANY_NAME,
                                           domains="cnbc.com, financialexpress.com",
@@ -45,42 +61,20 @@ for i in range(len(STOCK_LIST)):
                                           language='en',
                                           sort_by='relevancy')
 
-    percent = (stk_price_previous * 5 / 100)
-    if (stk_price_current >= stk_price_previous + percent) or (stk_price_current <= stk_price_previous - percent):
-        if len(all_articles["articles"]) >= 3:
+    # ---------------------- Checks the Percent and sends req msg ------------------------ #
+    if percent_change > 5:
+        total_articles = len(all_articles["articles"])
+        if total_articles >= 3:
             for news in range(3):
                 MSG_TEXT_LIST.append(f'Headline: {all_articles["articles"][news]["title"]}')
                 MSG_TEXT_LIST.append(f'Brief: {all_articles["articles"][news]["content"].partition("+")[0][:-1]}\n')
-
-                # ---------------------- Sending the message ------------------------#
-                msg_text = "\n".join(MSG_TEXT_LIST)
-                client = Client(config.TWILIO_ID, config.TWILIO_API)
-                message = client.messages.create(
-                        body=msg_text,
-                        from_='+13149123008',
-                        to='+918016323773'
-                )
-                print(message.status)
-        elif 0 < len(all_articles["articles"]) < 3:
+                send_msg("")
+        elif 0 < total_articles < 3:
             for news in range(len(all_articles["articles"])):
                 MSG_TEXT_LIST.append(f'Headline: {all_articles["articles"][news]["title"]}')
                 MSG_TEXT_LIST.append(f'Brief: {all_articles["articles"][news]["content"].partition("+")[0][:-1]}\n')
-
-                # ---------------------- Sending the message ------------------------#
-                msg_text = "\n".join(MSG_TEXT_LIST)
-                client = Client(config.TWILIO_ID, config.TWILIO_API)
-                message = client.messages.create(
-                        body=msg_text,
-                        from_='+13149123008',
-                        to='+918016323773'
-                )
-                print(message.status)
+                send_msg("")
         else:
-            msg_text = "\n".join(MSG_TEXT_LIST)
-            client = Client(config.TWILIO_ID, config.TWILIO_API)
-            message = client.messages.create(
-                body=f"{msg_text}\nNo Breaking News Available for {COMPANY_NAME}",
-                from_='+13149123008',
-                to='+918016323773'
-            )
-            print(message.status)
+            send_msg(f"\nNo Breaking News Available for {COMPANY_NAME}")
+    else:
+        print("working")
