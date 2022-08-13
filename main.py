@@ -47,7 +47,7 @@ for i in range(len(STOCK_LIST)):
 
     percent = (stk_price_previous * 5 / 100)
     if (stk_price_current >= stk_price_previous + percent) or (stk_price_current <= stk_price_previous - percent):
-        try:
+        if len(all_articles["articles"]) >= 3:
             for news in range(3):
                 MSG_TEXT_LIST.append(f'Headline: {all_articles["articles"][news]["title"]}')
                 MSG_TEXT_LIST.append(f'Brief: {all_articles["articles"][news]["content"].partition("+")[0][:-1]}\n')
@@ -61,7 +61,21 @@ for i in range(len(STOCK_LIST)):
                         to='+918016323773'
                 )
                 print(message.status)
-        except IndexError:
+        elif 0 < len(all_articles["articles"]) < 3:
+            for news in range(len(all_articles["articles"])):
+                MSG_TEXT_LIST.append(f'Headline: {all_articles["articles"][news]["title"]}')
+                MSG_TEXT_LIST.append(f'Brief: {all_articles["articles"][news]["content"].partition("+")[0][:-1]}\n')
+
+                # ---------------------- Sending the message ------------------------#
+                msg_text = "\n".join(MSG_TEXT_LIST)
+                client = Client(config.TWILIO_ID, config.TWILIO_API)
+                message = client.messages.create(
+                        body=msg_text,
+                        from_='+13149123008',
+                        to='+918016323773'
+                )
+                print(message.status)
+        else:
             msg_text = "\n".join(MSG_TEXT_LIST)
             client = Client(config.TWILIO_ID, config.TWILIO_API)
             message = client.messages.create(
